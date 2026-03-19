@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -70,30 +72,104 @@ class _WebImportTabState extends State<_WebImportTab>
   bool get wantKeepAlive => true;
 
   InAppWebViewController? _webCtrl;
-  String  _currentUrl = '';
-  bool    _canCapture = false;
-  _Status _status     = _Status.idle;
+  String  _currentUrl  = '';
+  bool    _webReady    = false;
+  _Status _status      = _Status.idle;
   String? _errorMsg;
   List<Course> _parsed = [];
+
+  // 地址栏
+  final _urlController = TextEditingController();
+  final _urlFocus      = FocusNode();
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    _urlFocus.dispose();
+    super.dispose();
+  }
+
+  void _navigate() {
+    var url = _urlController.text.trim();
+    if (url.isEmpty) return;
+    if (!url.startsWith('http')) url = 'https://$url';
+    _webCtrl?.loadUrl(urlRequest: URLRequest(url: WebUri(url)));
+    _urlFocus.unfocus();
+  }
 
   Future<void> _capture() async {
     if (_webCtrl == null) return;
     setState(() { _status = _Status.loading; _errorMsg = null; });
 
     try {
-      final html = await _webCtrl!
-          .evaluateJavascript(source: "document.documentElement.outerHTML")
-          .timeout(const Duration(seconds: 10));
-      if (html == null || html.toString().trim().isEmpty) {
-        throw Exception('页面内容为空，请等待页面加载完成后重试');
+      debugPrint('[Capture] 开始，先写入 JS 清理脚本...');
+
+      // Step 1：把清理好的内容存到全局变量 __capturedHtml
+      const jsStore = r"""
+(function() {
+  try {
+    var doc = document.cloneNode(true);
+    ['script','style','link','meta','noscript','iframe','svg','img','canvas']
+      .forEach(function(tag) {
+        doc.querySelectorAll(tag).forEach(function(el){ el.remove(); });
+      });
+    var body = doc.body ? doc.body.innerHTML : doc.documentElement.innerHTML;
+    body = body.replace(/<!--[\s\S]*?-->/g, '');
+    body = body.replace(/<(\w+)[^>]*>/g, '<$1>');
+    body = body.replace(/\s{2,}/g, ' ').trim();
+    if (body.length > 30000) body = body.substring(0, 30000);
+    window.__capturedHtml = body;
+    window.__capturedDone = true;
+  } catch(e) {
+    window.__capturedHtml = 'ERROR:' + e.toString();
+    window.__capturedDone = true;
+  }
+})();
+""";
+
+      // fire-and-forget 注入
+      // ignore: discarded_futures
+      _webCtrl!.evaluateJavascript(source: jsStore);
+      debugPrint('[Capture] 脚本已注入，开始轮询结果...');
+
+      // Step 2：轮询读取 __capturedDone，每 300ms 检查一次，最多等 20 秒
+      String html = '';
+      for (int i = 0; i < 67; i++) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        final done = await _webCtrl!
+            .evaluateJavascript(source: 'window.__capturedDone === true')
+            .timeout(const Duration(seconds: 3));
+        debugPrint('[Capture] 轮询 #$i done=$done');
+        if (done == true || done.toString() == 'true') {
+          final result = await _webCtrl!
+              .evaluateJavascript(source: 'window.__capturedHtml || ""')
+              .timeout(const Duration(seconds: 5));
+          html = result?.toString() ?? '';
+          // 清理全局变量
+          // ignore: discarded_futures
+          _webCtrl!.evaluateJavascript(
+              source: 'delete window.__capturedHtml; delete window.__capturedDone;');
+          break;
+        }
       }
+
+      debugPrint('[Capture] 获取到内容大小: ${html.length} 字节');
+
+      if (html.isEmpty || html == 'null' || html == 'undefined') {
+        throw Exception('未能获取页面内容，请确认页面已完全加载');
+      }
+      if (html.startsWith('ERROR:')) {
+        throw Exception('JS 执行错误: ${html.substring(6)}');
+      }
+
       setState(() => _status = _Status.parsing);
-      final courses = await CourseScheduleParser.parseFromHtml(
-          html.toString(), _currentUrl);
+      final courses = await CourseScheduleParser.parseFromHtml(html, _currentUrl);
       if (!mounted) return;
       setState(() { _status = _Status.preview; _parsed = courses; });
+
     } catch (e) {
       if (!mounted) return;
+      debugPrint('[Capture] 失败: $e');
       setState(() { _status = _Status.error; _errorMsg = e.toString(); });
     }
   }
@@ -112,51 +188,84 @@ class _WebImportTabState extends State<_WebImportTab>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    if (_status != _Status.idle) {
-      return _StatusOverlay(
-        status: _status, errorMsg: _errorMsg,
-        courses: _parsed, onRetry: _reset, onConfirm: _confirmImport,
-      );
-    }
 
+    // WebView 始终保留在树中，避免 channel 断开
+    // 状态覆盖层用 Stack 叠加在 WebView 上面
     return Stack(children: [
+      // ── 浏览器主体（始终存在）──────────────────────
       Column(children: [
-        Container(
-          width: double.infinity,
-          color: Theme.of(context).colorScheme.primary.withOpacity(0.07),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Text(
-            '在下方浏览器中登录教务系统，导航到课表页面后点击「抓取」',
-            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            textAlign: TextAlign.center,
-          ),
+        _AddressBar(
+          controller: _urlController,
+          focusNode:  _urlFocus,
+          isLoading:  false,
+          onSubmit:   _navigate,
+          onBack:     () => _webCtrl?.goBack(),
+          onForward:  () => _webCtrl?.goForward(),
+          onReload:   () => _webCtrl?.reload(),
         ),
         Expanded(
           child: InAppWebView(
             initialUrlRequest: URLRequest(url: WebUri('about:blank')),
             initialSettings: InAppWebViewSettings(
               javaScriptEnabled: true,
+              useWideViewPort: true,
+              loadWithOverviewMode: true,
+              supportZoom: true,
+              builtInZoomControls: true,
+              displayZoomControls: false,
               userAgent:
-                  'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 '
-                  'Chrome/120.0.0.0 Mobile Safari/537.36',
+                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                  'AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/120.0.0.0 Safari/537.36',
             ),
-            onWebViewCreated: (c) => _webCtrl = c,
-            onLoadStop: (_, url) => setState(() {
-              _currentUrl = url?.toString() ?? '';
-              _canCapture = _currentUrl.isNotEmpty &&
-                  _currentUrl != 'about:blank';
-            }),
+            onWebViewCreated: (c) {
+              _webCtrl = c;
+              setState(() => _webReady = true);
+            },
+            onLoadStart: (_, url) {
+              final u = url?.toString() ?? '';
+              if (u.isNotEmpty && u != 'about:blank') {
+                setState(() => _urlController.text = u);
+              }
+            },
+            onLoadStop: (_, url) {
+              final u = url?.toString() ?? '';
+              if (u.isNotEmpty && u != 'about:blank') {
+                setState(() {
+                  _currentUrl = u;
+                  _urlController.text = u;
+                });
+              }
+            },
+            onLoadError: (_, __, ___, ____) => setState(() {}),
           ),
         ),
       ]),
-      Positioned(
-        bottom: 0, left: 0, right: 0,
-        child: _CaptureBar(
-          canCapture: _canCapture,
-          url: _currentUrl,
-          onCapture: _capture,
+
+      // 底部抓取按钮（idle 时显示）
+      if (_status == _Status.idle)
+        Positioned(
+          bottom: 0, left: 0, right: 0,
+          child: _CaptureBar(
+            canCapture: _webReady,
+            onCapture:  _capture,
+          ),
         ),
-      ),
+
+      // 状态覆盖层（非 idle 时叠在 WebView 上）
+      if (_status != _Status.idle)
+        Positioned.fill(
+          child: ColoredBox(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: _StatusOverlay(
+              status:    _status,
+              errorMsg:  _errorMsg,
+              courses:   _parsed,
+              onRetry:   _reset,
+              onConfirm: _confirmImport,
+            ),
+          ),
+        ),
     ]);
   }
 }
@@ -475,13 +584,113 @@ class _PreviewList extends StatelessWidget {
       ]);
 }
 
-// ── WebView 底部抓取栏 ───────────────────────────────
+// ── 浏览器地址栏 ─────────────────────────────────────
+class _AddressBar extends StatelessWidget {
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final bool isLoading;
+  final VoidCallback onSubmit;
+  final VoidCallback onBack;
+  final VoidCallback onForward;
+  final VoidCallback onReload;
+
+  const _AddressBar({
+    required this.controller,
+    required this.focusNode,
+    required this.isLoading,
+    required this.onSubmit,
+    required this.onBack,
+    required this.onForward,
+    required this.onReload,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      padding: const EdgeInsets.fromLTRB(4, 6, 8, 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(children: [
+            // 后退
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_rounded, size: 18),
+              onPressed: onBack,
+              visualDensity: VisualDensity.compact,
+            ),
+            // 前进
+            IconButton(
+              icon: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
+              onPressed: onForward,
+              visualDensity: VisualDensity.compact,
+            ),
+            // 地址输入框
+            Expanded(
+              child: Container(
+                height: 36,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  style: const TextStyle(fontSize: 13),
+                  textInputAction: TextInputAction.go,
+                  keyboardType: TextInputType.url,
+                  autocorrect: false,
+                  decoration: InputDecoration(
+                    hintText: '输入教务系统网址',
+                    hintStyle: TextStyle(
+                        fontSize: 13, color: Colors.grey.shade400),
+                    border: InputBorder.none,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    prefixIcon: Icon(Icons.lock_outline_rounded,
+                        size: 14, color: Colors.grey.shade400),
+                    prefixIconConstraints:
+                        const BoxConstraints(minWidth: 30, minHeight: 0),
+                  ),
+                  onSubmitted: (_) => onSubmit(),
+                  onTap: () => controller.selection = TextSelection(
+                    baseOffset: 0,
+                    extentOffset: controller.text.length,
+                  ),
+                ),
+              ),
+            ),
+            // 刷新 / 停止
+            IconButton(
+              icon: Icon(
+                isLoading
+                    ? Icons.close_rounded
+                    : Icons.refresh_rounded,
+                size: 20,
+              ),
+              onPressed: onReload,
+              visualDensity: VisualDensity.compact,
+            ),
+          ]),
+          // 加载进度条
+          if (isLoading)
+            LinearProgressIndicator(
+              minHeight: 2,
+              color: Theme.of(context).colorScheme.primary,
+              backgroundColor: Colors.transparent,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 底部抓取按钮 ─────────────────────────────────────
 class _CaptureBar extends StatelessWidget {
   final bool canCapture;
-  final String url;
   final VoidCallback onCapture;
-  const _CaptureBar(
-      {required this.canCapture, required this.url, required this.onCapture});
+
+  const _CaptureBar({required this.canCapture, required this.onCapture});
 
   @override
   Widget build(BuildContext context) => SafeArea(
@@ -491,30 +700,19 @@ class _CaptureBar extends StatelessWidget {
             color: Theme.of(context).scaffoldBackgroundColor,
             border: Border(top: BorderSide(color: Colors.grey.shade200)),
           ),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            if (url.isNotEmpty && url != 'about:blank')
-              Padding(
-                padding: const EdgeInsets.only(bottom: 5),
-                child: Text(url,
-                    style:
-                        TextStyle(fontSize: 10, color: Colors.grey.shade400),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-              ),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: canCapture ? onCapture : null,
-                icon: const Icon(Icons.content_paste_rounded, size: 18),
-                label: const Text('抓取当前页面课表'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(13)),
-                ),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: canCapture ? onCapture : null,
+              icon: const Icon(Icons.content_paste_rounded, size: 18),
+              label: Text(canCapture ? '抓取当前页面课表' : '请先导航到课表页面'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(13)),
               ),
             ),
-          ]),
+          ),
         ),
       );
 }
