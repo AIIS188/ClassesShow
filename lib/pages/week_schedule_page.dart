@@ -12,6 +12,7 @@ import 'add_course_page.dart';
 import 'section_time_setting_page.dart';
 import '../services/schedule_settings.dart';
 import '../utils/week_utils.dart';
+import 'import_schedule_page.dart';
 
 class WeekSchedulePage extends StatefulWidget {
   const WeekSchedulePage({super.key});
@@ -140,54 +141,58 @@ class _WeekSchedulePageState extends State<WeekSchedulePage> {
     return OverlayEntry(
       builder: (_) => Stack(
         children: [
-          // 半透明遮罩，点击关闭
+          // 遮罩：点击菜单外部关闭
           Positioned.fill(
             child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
+              behavior: HitTestBehavior.opaque,
               onTap: _closeAll,
             ),
           ),
-          // 菜单卡片，跟随左侧按钮
+          // 菜单卡片：吸收自身区域点击，不让遮罩收到
           CompositedTransformFollower(
             link: _settingsLink,
             targetAnchor: Alignment.bottomLeft,
             followerAnchor: Alignment.topLeft,
             offset: const Offset(0, 6),
-            child: _PopupCard(
-              width: 260,
-              child: _SettingsContent(
-                semesterStartDate: _semesterStartDate,
-                sectionCount: sectionCount,
-                startWeekday: _startWeekday,
-                showNonCurrentWeek: _showNonCurrentWeek,
-                onSemesterStartDateTap: () async {
-                  final p = await showDatePicker(
-                    context: context,
-                    initialDate: _semesterStartDate,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2030),
-                  );
-                  if (p != null && mounted) {
-                    setState(() {
-                      _semesterStartDate = p;
-                      _todayWeek = calcCurrentWeek(p);
-                    });
-                    await ScheduleSettings.saveSemesterStart(p);
-                    _jumpToThisWeek();
-                  }
-                },
-                onSectionCountChanged: (n) {
-                  setState(() => sectionCount = n);
-                  ScheduleSettings.saveSectionCount(n);
-                },
-                onStartWeekdayChanged: (d) {
-                  setState(() => _startWeekday = d);
-                  ScheduleSettings.saveStartWeekday(d);
-                },
-                onShowNonCurrentWeekChanged: (v) {
-                  setState(() => _showNonCurrentWeek = v);
-                  ScheduleSettings.saveShowNonCurrent(v);
-                },
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {},
+              child: _PopupCard(
+                width: 260,
+                child: _SettingsContent(
+                  semesterStartDate: _semesterStartDate,
+                  sectionCount: sectionCount,
+                  startWeekday: _startWeekday,
+                  showNonCurrentWeek: _showNonCurrentWeek,
+                  onSemesterStartDateTap: () async {
+                    final p = await showDatePicker(
+                      context: context,
+                      initialDate: _semesterStartDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime(2030),
+                    );
+                    if (p != null && mounted) {
+                      setState(() {
+                        _semesterStartDate = p;
+                        _todayWeek = calcCurrentWeek(p);
+                      });
+                      await ScheduleSettings.saveSemesterStart(p);
+                      _jumpToThisWeek();
+                    }
+                  },
+                  onSectionCountChanged: (n) {
+                    setState(() => sectionCount = n);
+                    ScheduleSettings.saveSectionCount(n);
+                  },
+                  onStartWeekdayChanged: (d) {
+                    setState(() => _startWeekday = d);
+                    ScheduleSettings.saveStartWeekday(d);
+                  },
+                  onShowNonCurrentWeekChanged: (v) {
+                    setState(() => _showNonCurrentWeek = v);
+                    ScheduleSettings.saveShowNonCurrent(v);
+                  },
+                ),
               ),
             ),
           ),
@@ -214,48 +219,59 @@ class _WeekSchedulePageState extends State<WeekSchedulePage> {
     return OverlayEntry(
       builder: (_) => Stack(
         children: [
+          // 遮罩：点击菜单外部关闭
           Positioned.fill(
             child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
+              behavior: HitTestBehavior.opaque, // opaque：吞掉点击，不穿透
               onTap: _closeAll,
             ),
           ),
+          // 菜单卡片：吸收自身区域的点击，不让遮罩收到
           CompositedTransformFollower(
             link: _functionsLink,
             targetAnchor: Alignment.bottomRight,
             followerAnchor: Alignment.topRight,
             offset: const Offset(0, 6),
-            child: _PopupCard(
-              width: 200,
-              child: _FunctionsContent(
-                onSectionTimeSetting: () async {
-                  _closeAll();
-                  final result = await Navigator.push<List<SectionTime>>(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const SectionTimeSettingPage()),
-                  );
-                  if (result != null && mounted) {
-                    setState(() => _sectionTimes = result);
-                  }
-                },
-                onSwitchSemester: () {
-                  _closeAll();
-                  // TODO: 跳转学期切换页
-                },
-                onImportSchedule: () {
-                  _closeAll();
-                  // TODO: 跳转导入课表页
-                },
-                onAddCourse: () async {
-                  _closeAll();
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const AddCoursePage()),
-                  );
-                  _refresh();
-                },
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque, // 吸收点击，不下传遮罩
+              onTap: () {}, // 消费点击事件
+              child: _PopupCard(
+                width: 200,
+                child: _FunctionsContent(
+                  onSectionTimeSetting: () async {
+                    _closeAll();
+                    final result = await Navigator.push<List<SectionTime>>(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const SectionTimeSettingPage()),
+                    );
+                    if (result != null && mounted) {
+                      setState(() => _sectionTimes = result);
+                    }
+                  },
+                  onSwitchSemester: () {
+                    _closeAll();
+                    // TODO: 跳转学期切换页
+                  },
+                  onImportSchedule: () async {
+                    _closeAll();
+                    final imported = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ImportSchedulePage()),
+                    );
+                    if (imported == true && mounted) _refresh();
+                  },
+                  onAddCourse: () async {
+                    _closeAll();
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const AddCoursePage()),
+                    );
+                    _refresh();
+                  },
+                ),
               ),
             ),
           ),
