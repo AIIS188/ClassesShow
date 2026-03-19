@@ -2,17 +2,19 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/course.dart';
 import '../models/section_time.dart';
-import '../services/course_storage.dart';
+import '../services/semester_storage.dart';
 import '../services/section_time_storage.dart';
-import '../widget/week_schedule/week_header.dart';
-import '../widget/week_schedule/section_column.dart';
-import '../widget/week_schedule/background_grid.dart';
-import '../widget/week_schedule/course_block_layer.dart';
-import 'add_course_page.dart';
-import 'section_time_setting_page.dart';
 import '../services/schedule_settings.dart';
 import '../utils/week_utils.dart';
+import '../widget/week_schedule/background_grid.dart';
+import '../widget/week_schedule/section_column.dart';
+import '../widget/week_schedule/week_header.dart';
+import '../widget/week_schedule/course_block_layer.dart';
+import 'add_course_page.dart';
 import 'import_schedule_page.dart';
+import 'section_time_setting_page.dart';
+import 'semester_manage_page.dart';
+import 'main_page.dart' show semesterVersion;
 
 class WeekSchedulePage extends StatefulWidget {
   const WeekSchedulePage({super.key});
@@ -50,7 +52,7 @@ class _WeekSchedulePageState extends State<WeekSchedulePage> {
 
   // ── 课程数据（从 Hive 读取）──────────────
   List<Course> _courses = [];
-  void _refresh() => setState(() => _courses = CourseStorage.getCourses());
+  void _refresh() => setState(() => _courses = SemesterStorage.getActiveCourses());
 
   // ── 节次时间表 ────────────────────────────
   List<SectionTime> _sectionTimes = [];
@@ -71,9 +73,14 @@ class _WeekSchedulePageState extends State<WeekSchedulePage> {
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: _basePage);
-    _courses = CourseStorage.getCourses();
+    _courses = SemesterStorage.getActiveCourses();
     _loadSettings();
     _loadSectionTimes();
+    semesterVersion.addListener(_onSemesterChanged);
+  }
+
+  void _onSemesterChanged() {
+    if (mounted) _refresh();
   }
 
   Future<void> _loadSettings() async {
@@ -107,6 +114,7 @@ class _WeekSchedulePageState extends State<WeekSchedulePage> {
 
   @override
   void dispose() {
+    semesterVersion.removeListener(_onSemesterChanged);
     _removeOverlay(_settingsOverlay);
     _removeOverlay(_functionsOverlay);
     super.dispose();
@@ -249,9 +257,14 @@ class _WeekSchedulePageState extends State<WeekSchedulePage> {
                       setState(() => _sectionTimes = result);
                     }
                   },
-                  onSwitchSemester: () {
+                  onSwitchSemester: () async {
                     _closeAll();
-                    // TODO: 跳转学期切换页
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const SemesterManagePage()),
+                    );
+                    if (mounted) _refresh();
                   },
                   onImportSchedule: () async {
                     _closeAll();

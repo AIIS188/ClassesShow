@@ -3,12 +3,13 @@ import 'package:flutter/material.dart';
 import '../models/course.dart';
 import '../models/section_time.dart';
 import '../services/course_service.dart';
-import '../services/course_storage.dart';
 import '../services/schedule_settings.dart';
 import '../services/section_time_storage.dart';
 import '../utils/week_utils.dart';
 import '../widget/home/week_bar.dart';
 import '../widget/home/course_card.dart';
+import '../services/semester_storage.dart';
+import 'main_page.dart' show semesterVersion;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,10 +29,21 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _allCourses = SemesterStorage.getActiveCourses(); // 同步读取，立即有数据
+    _updateCourses();
     _loadSettings();
     _loadSectionTimes();
     _ticker = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) setState(() {});
+    });
+    semesterVersion.addListener(_onSemesterChanged);
+  }
+
+  void _onSemesterChanged() {
+    if (!mounted) return;
+    setState(() {
+      _allCourses = SemesterStorage.getActiveCourses();
+      _updateCourses();
     });
   }
 
@@ -43,13 +55,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _reloadCourses() {
-    final fresh = CourseStorage.getCourses();
-    if (fresh.length != _allCourses.length) {
-      setState(() {
-        _allCourses = fresh;
-        _updateCourses();
-      });
-    }
+    setState(() {
+      _allCourses = SemesterStorage.getActiveCourses();
+      _updateCourses();
+    });
   }
 
   Future<void> _loadSectionTimes() async {
@@ -59,6 +68,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    semesterVersion.removeListener(_onSemesterChanged);
     _ticker?.cancel();
     super.dispose();
   }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/course.dart';
-import '../services/course_storage.dart';
+import '../services/semester_storage.dart';
 
 class AddCoursePage extends StatefulWidget {
   const AddCoursePage({super.key});
@@ -59,7 +59,9 @@ class _AddCoursePageState extends State<AddCoursePage> {
       teacher: _teacherCtrl.text.trim(),
       weeks: _selectedWeeks.toList()..sort(),
     );
-    await CourseStorage.addCourse(course);
+    final active = SemesterStorage.getActive();
+    if (active == null) return;
+    await SemesterStorage.addCourse(active.id, course);
     if (mounted) Navigator.pop(context);
   }
 

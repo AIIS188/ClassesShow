@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../models/course.dart';
-import '../services/course_storage.dart';
+import '../services/semester_storage.dart';
 import '../services/course_schedule_parser.dart';
 
 class ImportSchedulePage extends StatefulWidget {
@@ -175,10 +175,38 @@ class _WebImportTabState extends State<_WebImportTab>
   }
 
   Future<void> _confirmImport() async {
+    // 弹出命名对话框
+    final name = await _askSemesterName();
+    if (name == null || !mounted) return;
     setState(() => _status = _Status.saving);
-    for (final c in _parsed) await CourseStorage.addCourse(c);
+    final id = await SemesterStorage.create(name);
+    for (final c in _parsed) await SemesterStorage.addCourse(id, c);
     if (!mounted) return;
     Navigator.pop(context, true);
+  }
+
+  Future<String?> _askSemesterName() async {
+    final ctrl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('为本次导入命名'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '如：2024-2025 秋季'),
+          onSubmitted: (v) => Navigator.pop(context, v),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, ctrl.text.trim().isEmpty ? '未命名学期' : ctrl.text.trim()),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _reset() => setState(() {
@@ -308,8 +336,32 @@ class _PdfImportTabState extends State<_PdfImportTab> {
   }
 
   Future<void> _confirmImport() async {
+    final ctrl = TextEditingController();
+    final name = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text('为本次导入命名'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: '如：2024-2025 秋季'),
+          onSubmitted: (v) => Navigator.pop(context, v),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(context,
+                ctrl.text.trim().isEmpty ? '未命名学期' : ctrl.text.trim()),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+    if (name == null || !mounted) return;
     setState(() => _status = _Status.saving);
-    for (final c in _parsed) await CourseStorage.addCourse(c);
+    final id = await SemesterStorage.create(name);
+    for (final c in _parsed) await SemesterStorage.addCourse(id, c);
     if (!mounted) return;
     Navigator.pop(context, true);
   }

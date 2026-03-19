@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'home_page.dart';
 import 'week_schedule_page.dart';
-import '../services/course_storage.dart';
+import '../services/semester_storage.dart';
 import '../data/mock_timetable.dart';
 import '../services/course_parser.dart';
+
+/// 全局学期版本号，每次切换学期 +1，子页监听后刷新数据
+final semesterVersion = ValueNotifier<int>(0);
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -16,23 +19,11 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   int _currentIndex = 0;
   bool _initialized = false;
-
-  static const _pages = [
-    HomePage(),
-    WeekSchedulePage(),
-  ];
+  late final List<Widget> _pages;
 
   static const _tabs = [
-    _TabItem(
-      icon:        Icons.house_rounded,
-      outlineIcon: Icons.house_outlined,
-      label:       '首页',
-    ),
-    _TabItem(
-      icon:        Icons.calendar_month_rounded,
-      outlineIcon: Icons.calendar_month_outlined,
-      label:       '课表',
-    ),
+    _TabItem(icon: Icons.house_rounded,          outlineIcon: Icons.house_outlined,          label: '首页'),
+    _TabItem(icon: Icons.calendar_month_rounded, outlineIcon: Icons.calendar_month_outlined, label: '课表'),
   ];
 
   @override
@@ -42,13 +33,24 @@ class _MainPageState extends State<MainPage> {
   }
 
   Future<void> _seedIfEmpty() async {
-    if (CourseStorage.getCourses().isNotEmpty) {
-      setState(() => _initialized = true);
-      return;
+    final semesters = SemesterStorage.getAll();
+
+    if (semesters.isEmpty) {
+      final id = await SemesterStorage.create('默认1');
+      final courses = CourseParser.parseCourses(mockKbList);
+      for (final c in courses) {
+        await SemesterStorage.addCourse(id, c);
+      }
     }
-    final courses = CourseParser.parseCourses(mockKbList);
-    for (final c in courses) await CourseStorage.addCourse(c);
-    if (mounted) setState(() => _initialized = true);
+
+    if (mounted) {
+      _initPages();
+      setState(() => _initialized = true);
+    }
+  }
+
+  void _initPages() {
+    _pages = [const HomePage(), const WeekSchedulePage()];
   }
 
   @override
