@@ -1,0 +1,97 @@
+Flutter assets will be downloaded from https://storage.flutter-io.cn. Make sure you trust this source!
+Launching lib/main.dart on sdk gphone64 x86 64 in debug mode...
+Running Gradle task 'assembleDebug'...                          
+Flutter assets will be downloaded from https://storage.flutter-io.cn. Make sure you trust this source!
+Running Gradle task 'assembleDebug'...                              5.7s
+✓ Built build/app/outputs/flutter-apk/app-debug.apk
+Installing build/app/outputs/flutter-apk/app-debug.apk...          550ms
+D/FlutterJNI(18372): Beginning load of flutter...
+D/FlutterJNI(18372): flutter (null) was loaded normally!
+I/flutter (18372): [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+D/FlutterRenderer(18372): Width is zero. 0,0
+D/FlutterRenderer(18372): Width is zero. 0,0
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+Syncing files to device sdk gphone64 x86 64...                  
+D/WindowLayoutComponentImpl(18372): Register WindowLayoutInfoListener on Context=com.example.classes_show.MainActivity@ec16c7c, of which baseContext=android.app.ContextImpl@6405081
+Syncing files to device sdk gphone64 x86 64...                      70ms
+
+Flutter run key commands.
+r Hot reload. 🔥🔥🔥
+R Hot restart.
+h List all available interactive commands.
+d Detach (terminate "flutter run" but leave application running).
+c Clear the screen
+q Quit (terminate the application on the device).
+
+A Dart VM Service on sdk gphone64 x86 64 is available at: http://127.0.0.1:37029/JiIQxNevlCY=/
+The Flutter DevTools debugger and profiler on sdk gphone64 x86 64 is available at: http://127.0.0.1:37029/JiIQxNevlCY=/devtools/?uri=ws://127.0.0.1:37029/JiIQxNevlCY=/ws
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/InsetsController(18372): hide(ime(), fromIme=false)
+I/ImeTracker(18372): com.example.classes_show:e12cb556: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+D/ProfileInstaller(18372): Installing profile for com.example.classes_show
+I/le.classes_show(18372): AssetManager2(0x73d7d2e950b8) locale list changing from [] to [en-US]
+I/ImeTracker(18372): com.example.classes_show:f6395ee9: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+D/InsetsController(18372): show(ime(), fromIme=false)
+D/InsetsController(18372): Setting requestedVisibleTypes to -1 (was -9)
+D/InputConnectionAdaptor(18372): The input method toggled cursor monitoring on
+I/ImeTracker(18372): com.example.classes_show:e49837d8: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+D/InsetsController(18372): show(ime(), fromIme=false)
+I/ImeTracker(18372): com.example.classes_show:e49837d8: onCancelled at PHASE_CLIENT_REPORT_REQUESTED_VISIBLE_TYPES
+W/InteractionJankMonitor(18372): Initializing without READ_DEVICE_CONFIG permission. enabled=false, interval=1, missedFrameThreshold=3, frameTimeThreshold=64, package=com.example.classes_show
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/InputConnectionAdaptor(18372): The input method toggled cursor monitoring on
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+I/ImeTracker(18372): com.example.classes_show:59e2aac9: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+D/InsetsController(18372): show(ime(), fromIme=false)
+I/ImeTracker(18372): com.example.classes_show:59e2aac9: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+I/ImeTracker(18372): com.example.classes_show:f6395ee9: onShown
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/InputConnectionAdaptor(18372): The input method toggled cursor monitoring on
+I/ImeTracker(18372): com.example.classes_show:cd05bd8d: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+D/InsetsController(18372): show(ime(), fromIme=false)
+I/ImeTracker(18372): com.example.classes_show:cd05bd8d: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+D/InputConnectionAdaptor(18372): The input method toggled cursor monitoring on
+I/ImeTracker(18372): com.example.classes_show:7a1cba6c: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT fromUser false
+D/InsetsController(18372): hide(ime(), fromIme=false)
+W/WindowOnBackDispatcher(18372): sendCancelIfRunning: isInProgress=false callback=android.view.ImeBackAnimationController@264d8dc
+D/InsetsController(18372): Setting requestedVisibleTypes to -9 (was -1)
+D/CompatChangeReporter(18372): Compat change id reported: 395521150; UID 10217; state: ENABLED
+W/WindowOnBackDispatcher(18372): sendCancelIfRunning: isInProgress=false callback=io.flutter.embedding.android.FlutterActivity$1@de3cd7b
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+D/FlutterJNI(18372): Sending viewport metrics to the engine.
+I/ImeTracker(18372): system_server:34fe2986: onCancelled at PHASE_CLIENT_ON_CONTROLS_CHANGED
+W/WindowOnBackDispatcher(18372): sendCancelIfRunning: isInProgress=false callback=io.flutter.embedding.android.FlutterActivity$1@de3cd7b
+E/flutter (18372): [ERROR:flutter/runtime/dart_vm_initializer.cc(40)] Unhandled Exception: setState() called after dispose(): _SettingsContentState#5f5fa(lifecycle state: defunct, not mounted)
+E/flutter (18372): This error happens if you call setState() on a State object for a widget that no longer appears in the widget tree (e.g., whose parent widget no longer includes the widget in its build). This error can occur when code calls setState() from a timer or an animation callback.
+E/flutter (18372): The preferred solution is to cancel the timer or stop listening to the animation in the dispose() callback. Another solution is to check the "mounted" property of this object before calling setState() to ensure the object is still in the tree.
+E/flutter (18372): This error might indicate a memory leak if setState() is being called because another object is retaining a reference to this State object after it has been removed from the tree. To avoid memory leaks, consider breaking the reference to this object during dispose().
+E/flutter (18372): #0      State.setState.<anonymous closure> (package:flutter/src/widgets/framework.dart:1163:9)
+E/flutter (18372): #1      State.setState (package:flutter/src/widgets/framework.dart:1198:6)
+E/flutter (18372): #2      _SettingsContentState.build.<anonymous closure> (package:classes_show/pages/week_schedule_page.dart:406:17)
+E/flutter (18372): <asynchronous suspension>
+E/flutter (18372): 
+W/WindowOnBackDispatcher(18372): sendCancelIfRunning: isInProgress=false callback=io.flutter.embedding.android.FlutterActivity$1@de3cd7b
